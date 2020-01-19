@@ -1,8 +1,17 @@
 const express = require('express')
 const userRoutes = require('./routes')
+const { InternalServerError } = require('./helpers/error-helper')
 require('./database/mongoose')
 
 const app = express()
+
+app.use(async (error, req, res, next) => {
+  if (error) {
+    const hasCode = error.statusCode || error.status
+    const body = hasCode ? error : InternalServerError(error.toString())
+    res.status(hasCode || 500).json(body)
+  } else { next() }
+})
 
 app.use(express.json())
 
