@@ -5,3 +5,7 @@ back-end/yarn.lock
 front-end/node_modules
 
 front-end/yarn.lock
+
+mobile/node_modules
+
+mobile/yarn.lock
