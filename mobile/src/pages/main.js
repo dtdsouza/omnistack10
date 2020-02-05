@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { StyleSheet, Image, View, Text } from 'react-native'
+import { StyleSheet, Image, View, Text, TouchableOpacity } from 'react-native'
 import MapView, { Marker, Callout } from 'react-native-maps'
 import { requestPermissionsAsync,getCurrentPositionAsync } from 'expo-location'
+import { TextInput } from 'react-native-gesture-handler'
+import { MaterialIcons } from '@expo/vector-icons'
 
-const main = () => {
-    const [ curretRegion, setCurrentRegion ] = useState(null) 
+import api from '../services/api'
+
+const main = ({ navigation }) => {
+    const [ currentRegion, setCurrentRegion ] = useState(null) 
+    const [ devs, setDevs ] = useState([])
+    const [ techs, setTechs ] = useState('')
 
     useEffect(() => {
         const loadInitialPosition = async () => {
@@ -26,21 +32,56 @@ const main = () => {
         loadInitialPosition()
     },[])
 
-    if(!curretRegion) return null
+    const loadDevs = async () => {
+        const { latitude, longitude } = currentRegion
+
+        const { data: { data } } = await api.get(`/users`)
+
+        setDevs(data)
+    }
+
+    const handleRegionChange = (region) => {
+        setCurrentRegion(region)
+    }
+
+    if(!currentRegion) return null
 
     return (
-        <MapView initialRegion={curretRegion} style={styles.map}>
-            <Marker coordinate={{ latitude: -31.758789, longitude: -52.3457947 }}>
-                <Image style={styles.avatar} source={{uri: 'https://avatars2.githubusercontent.com/u/37113459?s=400&u=19c6e04df4dbfe04e642a0f7fcc318d965c49873&v=4'}}/>
-                <Callout>
-                    <View style={styles.callout}>
-                        <Text style={styles.devName}>Daniel Teixeira de Souza</Text>
-                        <Text style={styles.devBio}>Computer Engineering student.</Text>
-                        <Text style={styles.devTec}>Node.js</Text>
-                    </View>
-                </Callout>
-            </Marker>
+        <>
+        <MapView onRegionChangeComplete={ handleRegionChange } initialRegion={ currentRegion } style={styles.map}>
+            {
+                devs.map(dev => (
+                    <Marker key={dev._id} coordinate={{ latitude: dev.location.coordinates[1], longitude: dev.location.coordinates[0] }}>
+                        <Image style={styles.avatar} source={{uri: dev.avatar_url}}/>
+                        <Callout onPress={() => {
+                            navigation.navigate('Profile', { github_username: dev.github_username })
+                        }}>
+                            <View style={styles.callout}>
+                                <Text style={styles.devName}>{dev.name}</Text>
+                                <Text style={styles.devBio}>{dev.bio}</Text>
+                                <Text style={styles.devTec}>{dev.skills.join(', ')}</Text>
+                            </View>
+                        </Callout>
+                    </Marker>
+                ))
+            }
         </MapView>
+        <View style={styles.searchForm}>
+            <TextInput 
+                style={styles.searchInput}
+                placeholder='Buscar devs por techs...'
+                placeholderTextColor='#999'
+                autoCapitalize='words'
+                autoCorrect={ false }
+                value={techs}
+                onChangeText={setTechs}
+            />
+
+            <TouchableOpacity onPress={() => loadDevs()} style={styles.loadButton}>
+               <MaterialIcons name='my-location' size={20} color='#fff' />
+            </TouchableOpacity>
+        </View>
+        </>
     )
 }
 
@@ -68,6 +109,39 @@ const styles = StyleSheet.create({
     },
     devTec: {
         marginTop: 5
+    },
+    searchForm: {
+        position: 'absolute',
+        top: 20,
+        left: 20,
+        right: 20,
+        zIndex: 5,
+        flexDirection: 'row'
+    },
+    searchInput: {
+        flex: 1,
+        height: 50,
+        backgroundColor: '#fff',
+        color: '#333',
+        borderRadius: 25,
+        paddingHorizontal: 20,
+        fontSize: 16,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowOffset: {
+            width: 4,
+            height: 4
+        },
+        elevation: 2
+    },
+    loadButton: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#8E4dff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 15
     }
 })
 
